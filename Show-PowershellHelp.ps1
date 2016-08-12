@@ -8,7 +8,8 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
 # Change:		27.06.2016	AAN		ReBuild from GTFC.ps1	
-#									without remote exchange		
+#									without remote exchange	
+#				12.08.2016	AAN		Show Help in an other Window	
 #
 ###############################################################################################################################
 #
@@ -31,9 +32,9 @@ Set-StrictMode -Version Latest
 
 $script:ScriptName		= "Show-PowershellHelp"
 $script:ScriptDesc		= "Powershell Help a little bit smarter!"
-$script:ScriptDate		= "28. Juli 2016"
+$script:ScriptDate		= "12. August 2016"
 $script:ScriptAuthor	= "Axel Anderson"					
-$script:ScriptVersion	= "2.0.5"
+$script:ScriptVersion	= "2.1.0"
 
 #Script Information
 $script:WorkingFileName  = $MyInvocation.MyCommand.Definition
@@ -109,7 +110,9 @@ $script:CommandTypes = @(
 $script:InternalFunctionList = @("Show-PowershellHelpGUI","Fill-HelpBoxes","Reload-Data","New-ApplicationLauncherObject","Invoke-ApplicationLauncher","Select-FolderDialog","Show-InfoBox")
 	
 $script:TextStringWidth = 127
-					 
+	
+$Script:CurrentValue = ""
+	
 #endregion ScriptVariables
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -126,6 +129,58 @@ function Show-InfoBox {
 	$d = [Windows.Forms.MessageBox]::Show($SB.toString(), "$script:ScriptName", 
 	[Windows.Forms.MessageBoxButtons]::Ok, [Windows.Forms.MessageBoxIcon]::Information,
 	[System.Windows.Forms.MessageBoxDefaultButton]::Button1)
+}
+#
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#
+Function New-SingleHelpWindow {
+	[cmdletbinding()]
+	Param	(
+				[Parameter(Mandatory=$True)][string]$WindowTitle,
+				[Parameter(Mandatory=$True)][string]$HelpText
+			)	
+	#region GUI BASE
+	
+	$formWidth   = 400
+	$formHeight  = 500	
+
+	# ---------------------------------------------------------------------------------------------------------------------	
+	$formSingleHelpWindows = New-Object System.Windows.Forms.Form		
+		$textboxSingleHelpWindows = New-Object System.Windows.Forms.Textbox
+		
+	$consoleFont = New-Object System.Drawing.Font("Lucida Console", 8.25, [System.Drawing.FontStyle]::Regular)
+	# ---------------------------------------------------------------------------------------------------------------------	
+	$textboxSingleHelpWindows | % {
+		$_.Name 		= "textboxSingleHelpWindows"
+		$_.Anchor		=([System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left -bor [System.Windows.Forms.AnchorStyles]::Right)
+		$_.Location		= New-Object System.Drawing.Point(0,0)
+		$_.Size			= New-Object System.Drawing.Size(0,0)
+		$_.Dock			= [System.Windows.Forms.DockStyle]::Fill;
+		$_.MultiLine 	= $true;
+		$_.ReadOnly		= $true;
+		$_.ScrollBars 	= "Both";
+		$_.WordWrap   	= $false;
+		$_.Font		  	= $consoleFont
+		$_.TabStop 		= $false	
+		$_.ReadOnly 	= $True
+		$_.Text			= $HelpText
+	}	# ---------------------------------------------------------------------------------------------------------------------	
+	$formSingleHelpWindows | % {
+		$_.FormBorderStyle 	= [System.Windows.Forms.FormBorderStyle]::Sizable
+		$_.BackColor 		= [System.Drawing.Color]::CornSilk
+		$_.Name				= "formSingleHelpWindows"
+		$_.ControlBox 		= $True
+		$_.ShowInTaskbar 	= $True
+		$_.StartPosition 	= "CenterScreen"
+		$_.ClientSize 		= New-Object System.Drawing.Size($formWidth, $formHeight)
+		$_.Text 			= $WindowTitle
+		$_.Controls.Add($textboxSingleHelpWindows)
+	}	
+	#endregion GUI BASE
+	# ---------------------------------------------------------------------------------------------------------------------	
+	$formSingleHelpWindows.Show()
+	# ---------------------------------------------------------------------------------------------------------------------	
+		
 }
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -296,23 +351,26 @@ Param   (
 			($script:CommandType_Alias)	{
 							$textboxCommand.Text = Get-Command $Value | format-list * | out-string -Width $script:TextStringWidth
 							$textboxHelp.Text 	 = Get-help $Value -Full | out-string -Width $script:TextStringWidth
-			
+							$Script:CurrentValue = $Value
 							break;
 						}
 			($script:CommandType_About)	{
 							$textboxCommand.Text = ""
 							$textboxHelp.Text 	 = Get-help $Value -Full | out-string -Width $script:TextStringWidth
+							$Script:CurrentValue = $Value
 							break;
 						}
 			($script:CommandType_Provider)	{
 							$textboxCommand.Text = ""
 							$textboxHelp.Text 	 = Get-help $Value -Full | out-string -Width $script:TextStringWidth
+							$Script:CurrentValue = $Value
 						}
 			default		{
 							switch ($Module) {
 								$Script:Object_Standard	{
 												$textboxCommand.Text = Get-Command $Value | format-list * | out-string -Width $script:TextStringWidth
 												$textboxHelp.Text 	 = Get-help $Value -Full | out-string -Width $script:TextStringWidth
+												$Script:CurrentValue = $Value
 												break;
 											}
 								<#
@@ -323,6 +381,7 @@ Param   (
 								default		{
 												$textboxCommand.Text = Get-Command $Value | format-list * | out-string -Width $script:TextStringWidth
 												$textboxHelp.Text 	 = Get-help $Value -Full | out-string -Width $script:TextStringWidth
+												$Script:CurrentValue = $Value
 												break;
 											}
 							}
@@ -422,12 +481,16 @@ Param   (
 	
 	$comboBoxWidth = 200
 	$LabelHeight = 22
+	
+	$ButtonWidth = 120
+	$ButtonHeight = 22
 	# ---------------------------------------------------------------------------------------------------------------------	
 	$formMain							= New-Object System.Windows.Forms.Form	
 		$PanelTop						= New-Object System.Windows.Forms.Panel	
 			$ComboBoxObject				= New-Object System.Windows.Forms.ComboBox
 			$ComboBoxModule				= New-Object System.Windows.Forms.ComboBox
 			$ComboBoxSort				= New-Object System.Windows.Forms.ComboBox
+			$ButtonShowWindow			= New-Object System.Windows.Forms.Button
 			
 		$PanelMain						= New-Object System.Windows.Forms.Panel
 			$SplitContainerMain			= New-Object System.Windows.Forms.SplitContainer
@@ -805,6 +868,17 @@ Param   (
 	# ---------------------------------------------------------------------------------------------------------------------	
 	$xPos += $comboBoxWidth + $Dist
 	# ---------------------------------------------------------------------------------------------------------------------	
+	$ButtonShowWindow | % {
+		$_.BackColor = [System.Drawing.SystemColors]::Control
+		$_.Location = New-Object System.Drawing.Point($xPos, $yPos)
+		$_.Name = "ButtonSet"
+		$_.Size = New-Object System.Drawing.Size($ButtonWidth, $ButtonHeight)
+		$_.Text = "Show Help Window"
+		$_.UseVisualStyleBackColor = $True		
+		$_.TabStop = $false	
+	}
+	
+	# ---------------------------------------------------------------------------------------------------------------------	
 	$PanelTop | % {
 		$_.Size 		= New-Object System.Drawing.Size(0,32)
 		$_.Dock 		= [System.Windows.Forms.DockStyle]::Top
@@ -816,6 +890,7 @@ Param   (
 		$_.Controls.Add($ComboBoxObject)
 		$_.Controls.Add($ComboBoxModule)
 		$_.Controls.Add($ComboBoxSort)
+		$_.Controls.Add($ButtonShowWindow)
 	}	
 	# ---------------------------------------------------------------------------------------------------------------------	
 	$StatusBarPanel1 | % {
@@ -897,8 +972,20 @@ Param   (
 		$object = $comboBoxObject.text
 		Fill-HelpBoxes $module $object $this.Text	
 	})
+	$ButtonShowWindow.Add_Click({	
+		$Title 		= "PSHELP : $($Script:CurrentValue)"
+		$HelpText 	= $textboxHelp.Text
+		
+		New-SingleHelpWindow -WindowTitle $Title -HelpText $HelpText
+	})
 	
 	$FormMain.add_Shown({$FormMain.Activate()})
+	$FormMain.add_FormClosed({
+		$OpenForms = [System.Windows.Forms.Application]::OpenForms | Where-Object {$_.Name -ieq "formSingleHelpWindows"} 
+		Foreach ($Item in $openForms) {
+			$Item.Close()
+		}	
+	})
 	
 	$StatusBarPanel3.Text = ("PSVersion {0}" -f $PSVersionTable.PSVersion.ToString())
 	$OSInfo = Get-WmiObject Win32_OperatingSystem
@@ -920,5 +1007,7 @@ Param   (
 ###############################################################################################################################
 # ##### MAIN
 Show-PowershellHelpGUI
+
+
 # ##### END MAIN
 ###############################################################################################################################
