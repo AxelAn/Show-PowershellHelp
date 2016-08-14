@@ -7,9 +7,12 @@
 #
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #
-# Change:		27.06.2016	AAN		ReBuild from GTFC.ps1	
-#									without remote exchange	
-#				12.08.2016	AAN		Show Help in an other Window	
+# Change:		27.06.2016	2.0.0	AAN		
+#					ReBuild from GTFC.ps1, without remote exchange	
+#				12.08.2016	2.1.0	AAN		
+#					Show Help in an other Window	
+#				14.08.2016	2.1.1	AAN		
+#					New-SingleHelpWindow added to InternalFunctionList 
 #
 ###############################################################################################################################
 #
@@ -32,9 +35,9 @@ Set-StrictMode -Version Latest
 
 $script:ScriptName		= "Show-PowershellHelp"
 $script:ScriptDesc		= "Powershell Help a little bit smarter!"
-$script:ScriptDate		= "12. August 2016"
+$script:ScriptDate		= "14. August 2016"
 $script:ScriptAuthor	= "Axel Anderson"					
-$script:ScriptVersion	= "2.1.0"
+$script:ScriptVersion	= "2.1.1"
 
 #Script Information
 $script:WorkingFileName  = $MyInvocation.MyCommand.Definition
@@ -107,7 +110,16 @@ $script:CommandTypes = @(
 							
 						)
 						
-$script:InternalFunctionList = @("Show-PowershellHelpGUI","Fill-HelpBoxes","Reload-Data","New-ApplicationLauncherObject","Invoke-ApplicationLauncher","Select-FolderDialog","Show-InfoBox")
+$script:InternalFunctionList = @(
+									"Show-PowershellHelpGUI",
+									"Fill-HelpBoxes",
+									"Reload-Data",
+									"New-ApplicationLauncherObject",
+									"Invoke-ApplicationLauncher",
+									"Select-FolderDialog",
+									"Show-InfoBox",
+									"New-SingleHelpWindow"
+								)
 	
 $script:TextStringWidth = 127
 	
